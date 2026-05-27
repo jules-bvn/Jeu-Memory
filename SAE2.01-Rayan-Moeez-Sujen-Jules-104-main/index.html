@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Jeu de Memory - Rayan, Moeez, Jules & Sujen 104</title>
+  
+  <link rel="stylesheet" href="css/style.css">
+  <script src="js/app.js" type="module"></script>
+</head>
+<body>
+<header>
+  <h1>Jeu de Memory</h1>
+</header>
+
+<!-- ========================================== -->
+<!-- LAYOUT PRINCIPAL : SÉPARATION JEU / RÈGLES -->
+<!-- ========================================== -->
+<div class="main-layout">
+  
+  <!-- COLONNE DE GAUCHE : LE JEU -->
+  <div class="game-column">
+    
+    <!-- 1. PANNEAU DE DÉMARRAGE -->
+    <div class="setup-form" id="panneauFormulaire">
+      <h2>Démarrer une nouvelle partie</h2>
+      
+      <form class="game-form" id="formulaireJeu">
+        <label for="nomJoueur">Nom du Joueur 1</label>
+        <input type="text" id="nomJoueur" required placeholder="Ex: MasterKC">
+
+        <!-- Zone Joueur 2 (1vs1 uniquement) -->
+        <div id="zoneJoueur2" class="hidden" style="margin-top: -0.5rem; margin-bottom: 0.5rem;">
+          <label for="nomJoueur2">Nom du Joueur 2</label>
+          <input type="text" id="nomJoueur2" placeholder="Ex: Challenger">
+        </div>
+
+        <label for="modeJeu">Mode de jeu</label>
+        <select id="modeJeu" required>
+          <option value="normal">Normal</option>
+          <option value="classe">🏆 Classé</option>
+          <option value="1vs1">⚔️ 1 vs 1 </option>
+          <option value="fast">⚡ Fast </option>
+          <option value="chaos">🌪️ Chaos </option>
+        </select>
+
+        <label for="difficulte">Niveau de difficulté</label>
+        <select id="difficulte" required>
+          <option value="easy">Facile (4 paires)</option>
+          <option value="medium">Moyen (6 paires)</option>
+          <option value="hard">Difficile (8 paires)</option>
+        </select>
+
+        <label for="collectionImages">Collection d'images</label>
+        <select id="collectionImages" required>
+          <option value="LEC">LEC</option>
+          <option value="LFL">LFL</option>
+          <option value="VCT">VCT</option>
+          <option value="personnalisee">Personnalisée (Vos images)</option>
+        </select>
+
+        <div id="zoneUploadImages" class="hidden" style="margin-top: 0.5rem; background: rgba(0,0,0,0.2); padding: 1rem; border-radius: 0.375rem;">
+          <label for="uploadImages" style="margin-bottom: 0.5rem; color: var(--color-timer);">Sélectionnez vos images :</label>
+          <input type="file" id="uploadImages" multiple accept="image/*" style="border: none; padding: 0;">
+        </div>
+
+        <!-- Champ pour la musique YouTube -->
+        <label for="lienYoutube">🎶 Musique de fond (Lien YouTube)</label>
+        <input type="text" id="lienYoutube" placeholder="Collez un lien YouTube ici (optionnel)">
+        <div id="lecteurYoutube" class="hidden"></div> <!-- Lecteur invisible -->
+
+        <button type="submit" id="boutonSoumettre">Démarrer la partie</button>
+      </form>
+    </div>
+
+    <!-- 2. ZONE DE JEU -->
+    <div class="game-area hidden" id="zoneJeu">
+      <div class="game-area-header" style="flex-wrap: wrap; gap: 1rem;">
+        
+        <!-- HUD SOLO -->
+        <div id="hud-solo" style="display: flex; gap: 1.5rem; align-items: center;">
+          <div class="game-timer" id="affichageChrono">00:00</div>
+          <div>Mouv. : <strong id="affichageMouvements" style="color: var(--color-text-white); font-size: 1.2rem;">0</strong></div>
+          <!-- Compteur d'erreurs global -->
+          <div>Erreurs : <strong id="affichageErreurs" style="color: #f87171; font-size: 1.2rem;">0</strong></div>
+          <div>Paires : <strong id="compteurPaires" style="color: var(--color-timer); font-size: 1.2rem;">0</strong></div>
+        </div>
+
+        <!-- HUD 1VS1 -->
+        <div id="hud-1vs1" class="hidden" style="display: flex; gap: 1.5rem; align-items: center; justify-content: center;">
+          <div style="color: #4ade80; font-size: 1.2rem; font-weight: bold;"><span id="nomJ1HUD">J1</span> : <span id="scoreJ1">0</span></div>
+          <div id="affichageTour" style="color: gold; font-weight: bold; border: 2px solid gold; padding: 0.3rem 1rem; border-radius: 0.5rem; font-size: 1.2rem;">Tour : J1</div>
+          <div style="color: #f87171; font-size: 1.2rem; font-weight: bold;"><span id="nomJ2HUD">J2</span> : <span id="scoreJ2">0</span></div>
+        </div>
+        
+        <!-- Boutons d'actions -->
+        <div style="display: flex; gap: 0.5rem; margin-left: auto;">
+          <!-- Bouton Sabotage pour le 1vs1 -->
+          <button id="boutonSabotage" class="hidden" style="padding: 0.5rem 1rem; background-color: #8b5cf6; color: #fff; font-weight: bold; border: none; border-radius: 0.375rem; cursor: pointer;">Sabotage (-2 pts)</button>
+          <button id="boutonIndice" style="padding: 0.5rem 1rem; background-color: #eab308; color: #000; font-weight: bold; border: none; border-radius: 0.375rem; cursor: pointer;">Indice (+15s)</button>
+          <button id="abandon">Abandonner</button>
+        </div>
+      </div>
+      <div class="game-board"></div>
+    </div>
+
+    <!-- 3. PANNEAU DU CLASSEMENT -->
+    <div class="setup-form hidden" id="panneauClassement" style="max-width: 64rem;">
+      <h2 style="text-align: center; color: gold;">🏆 Classement Classé (<span id="etiquetteDifficulte"></span>)</h2>
+      <div style="overflow-x: auto;">
+        <table style="width: 100%; border-collapse: collapse; margin-top: 1rem; text-align: left;">
+          <thead>
+            <tr>
+              <th style="padding: 0.75rem; border-bottom: 2px solid rgba(255,255,255,0.2);">Rang</th>
+              <th style="padding: 0.75rem; border-bottom: 2px solid rgba(255,255,255,0.2);">Pseudo</th>
+              <th style="padding: 0.75rem; border-bottom: 2px solid rgba(255,255,255,0.2);">Palier</th>
+              <th style="padding: 0.75rem; border-bottom: 2px solid rgba(255,255,255,0.2);">Elo</th>
+              <th style="padding: 0.75rem; border-bottom: 2px solid rgba(255,255,255,0.2);">Temps</th>
+              <!-- Affichage des erreurs dans le tableau -->
+              <th style="padding: 0.75rem; border-bottom: 2px solid rgba(255,255,255,0.2);">Erreurs</th> 
+            </tr>
+          </thead>
+          <tbody id="corpsClassement"></tbody>
+        </table>
+      </div>
+      <button id="boutonRejouer" style="margin-top: 1.5rem; width: 100%; padding: 0.75rem; border: none; border-radius: 0.375rem; cursor: pointer; background-color: var(--color-btn-primary); color: var(--color-text-white); font-weight: bold;">Rejouer</button>
+    </div>
+  </div>
+
+  <!-- COLONNE DE DROITE : LES RÈGLES -->
+  <aside class="rules-column">
+    <div class="rules-panel">
+      <h2>📖 Règles du Jeu</h2>
+      
+      <h3>🎮 Modes Solo</h3>
+      <ul>
+        <li><strong>Normal :</strong> Entraînez-vous sans pression.</li>
+        <li><strong>🏆 Classé :</strong> Gagnez de l'Elo. Plus vous êtes rapide et faites peu d'erreurs, plus vous montez !</li>
+        <li><strong>⚡ Fast :</strong> Vous avez <strong>2 secondes</strong> pour retourner la 2ème carte, sinon c'est une erreur !</li>
+        <li><strong>🌪️ Chaos :</strong> À chaque paire trouvée, le reste du plateau est mélangé !</li>
+      </ul>
+
+      <h3>⚔️ Mode 1vs1</h3>
+      <ul>
+        <li>Trouvez une paire pour marquer 1 point et rejouer.</li>
+        <li>L'Indice donne <strong>1 point gratuit</strong> à l'adversaire.</li>
+        <li><strong>Bouton Sabotage :</strong> Coûte 2 points. Mélange les cartes restantes pour ruiner la mémoire de l'adversaire !</li>
+      </ul>
+      
+      <h3>⚠️ Compteur d'erreurs</h3>
+      <p>Dans tous les modes, chaque erreur est comptée. En classé, faire trop d'erreurs détruira votre score Elo final.</p>
+    </div>
+  </aside>
+
+</div>
+
+</body>
+</html>
